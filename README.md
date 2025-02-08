@@ -1,55 +1,36 @@
-#include <WiFi.h>
-#include <BlynkSimpleEsp32.h>
-#include "secrets.h" // Include WiFi credentials from a separate file
+# Smart Power Theft Detection System
 
+# Overview
+This project detects unauthorized power theft using an ESP32, ACS712 sensors, a relay, and Blynk IoT notifications.
 
-#define BLYNK_AUTH_TOKEN "your-blynk-auth-token"
+# Features
+- Detects power theft by comparing current readings.
+- Sends alerts via Blynk IoT.
+- Auto power cutoff using a relay.
 
+## Circuit Diagram
+(Insert the circuit diagram image link)
 
-#define ACS712_SOURCE A2   // First ACS712 Sensor (Before Energy Meter)
-#define ACS712_LOAD A3     // Second ACS712 Sensor (After Energy Meter)
-#define RELAY_PIN 22       // Relay Control (BC547 Base)
-#define THRESHOLD_DIFFERENCE 2.0 // Ampere difference indicating theft
+# Hardware Required
+- ESP32 S3
+- ACS712 Current Sensors (2)
+- Relay Module
+- Energy Meter
+- MCB
 
+# How It Works
+1. The ESP32 reads current values from the ACS712 sensors.
+2. If the difference between source and load currents is high, it detects theft.
+3. The relay is triggered to cut off power.
+4. An alert is sent to the user via Blynk.
 
-float currentSource = 0.0;
-float currentLoad = 0.0;
+# How to Use
+1. Upload the provided code to ESP32.
+2. Connect the circuit as per the diagram.
+3. Monitor theft alerts on Blynk.
 
-void setup() {
-    Serial.begin(115200);
-    pinMode(RELAY_PIN, OUTPUT);
-    digitalWrite(RELAY_PIN, LOW); // Default OFF
-    WiFi.begin(ssid, password);
-    Blynk.begin(BLYNK_AUTH_TOKEN, ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.println("Connecting to WiFi...");
-    }
-    Serial.println("Connected to WiFi");
-}
-
-void loop() {
-    Blynk.run();
-    currentSource = readCurrent(ACS712_SOURCE);
-    currentLoad = readCurrent(ACS712_LOAD);
-    
-    Serial.print("Source Current: "); Serial.print(currentSource); Serial.print(" A");
-    Serial.print(" | Load Current: "); Serial.print(currentLoad); Serial.println(" A");
-    
-
-    if ((currentSource - currentLoad) > THRESHOLD_DIFFERENCE) {
-        Serial.println("⚠️ Power Theft Detected! Sending Alert...");
-        Blynk.notify("Power Theft Detected!");
-    }
-    
-    delay(5000); 
-}
-
-float readCurrent(int sensorPin) {
-    int sensorValue = analogRead(sensorPin);
-    float voltage = (sensorValue / 4095.0) * 3.3; // ESP32 ADC is 12-bit, 3.3V reference
-    float current = (voltage - 2.5) / 0.185; // ACS712-5A, adjust for 20A/30A models
-    return abs(current);
+# License
+This project is open-source.
 }
 
 
