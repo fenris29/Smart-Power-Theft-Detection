@@ -1,4 +1,56 @@
-The system will consist of a microcontroller of ESP32 S3, two ACS712 current sensors, relay module, an energy meter, MCB, and WiFi. The two ACS712 sensors will be placed in different points within the circuit, where the first sensor measures the current before reaching the energy meter, and the second measures after the meter and before reaching the load. It continuously compares these readings. If the difference is more than a predetermined threshold, then that could be an indication of potential power theft. In such cases, the system initiates relay cut-off control of the power supply and sends an alert message through the Blynk IoT platform.
+#include <WiFi.h>
+#include <BlynkSimpleEsp32.h>
+#include "secrets.h" // Include WiFi credentials from a separate file
+
+
+#define BLYNK_AUTH_TOKEN "your-blynk-auth-token"
+
+
+#define ACS712_SOURCE A2   // First ACS712 Sensor (Before Energy Meter)
+#define ACS712_LOAD A3     // Second ACS712 Sensor (After Energy Meter)
+#define RELAY_PIN 22       // Relay Control (BC547 Base)
+#define THRESHOLD_DIFFERENCE 2.0 // Ampere difference indicating theft
+
+
+float currentSource = 0.0;
+float currentLoad = 0.0;
+
+void setup() {
+    Serial.begin(115200);
+    pinMode(RELAY_PIN, OUTPUT);
+    digitalWrite(RELAY_PIN, LOW); // Default OFF
+    WiFi.begin(ssid, password);
+    Blynk.begin(BLYNK_AUTH_TOKEN, ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(1000);
+        Serial.println("Connecting to WiFi...");
+    }
+    Serial.println("Connected to WiFi");
+}
+
+void loop() {
+    Blynk.run();
+    currentSource = readCurrent(ACS712_SOURCE);
+    currentLoad = readCurrent(ACS712_LOAD);
+    
+    Serial.print("Source Current: "); Serial.print(currentSource); Serial.print(" A");
+    Serial.print(" | Load Current: "); Serial.print(currentLoad); Serial.println(" A");
+    
+
+    if ((currentSource - currentLoad) > THRESHOLD_DIFFERENCE) {
+        Serial.println("⚠️ Power Theft Detected! Sending Alert...");
+        Blynk.notify("Power Theft Detected!");
+    }
+    
+    delay(5000); 
+}
+
+float readCurrent(int sensorPin) {
+    int sensorValue = analogRead(sensorPin);
+    float voltage = (sensorValue / 4095.0) * 3.3; // ESP32 ADC is 12-bit, 3.3V reference
+    float current = (voltage - 2.5) / 0.185; // ACS712-5A, adjust for 20A/30A models
+    return abs(current);
+}
 
 
 
